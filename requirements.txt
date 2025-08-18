@@ -1,3 +1,5 @@
 gspread
 oauth2client
 # attendence-469214
+fastapi
+uvicorn

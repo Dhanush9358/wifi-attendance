@@ -23,8 +23,8 @@ RUN mkdir -p /app/logs
 ENV PYTHONUNBUFFERED=1
 
 # Set default command to run your hourly tracker
-CMD ["python", "-u", "hourly_tracker.py"]
-
+# CMD ["python", "-u", "hourly_tracker.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
 
 
 # Build the Docker image
