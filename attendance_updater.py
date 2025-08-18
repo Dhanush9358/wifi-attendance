@@ -26,18 +26,15 @@ def connect_to_sheet():
 def ping(ip):
     subprocess.run(["ping", "-n", "1", "-w", "100", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-def get_local_subnet():
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)  # e.g., 10.158.108.71
-    parts = local_ip.split(".")
-    subnet = ".".join(parts[:3]) + "."       # e.g., "10.158.108."
-    return subnet
-
-def scan_subnet(base_ip, start=1, end=254):
+def scan_subnet(base_ip="192.168.0.", start=1, end=254):
     with ThreadPoolExecutor(max_workers=100) as executor:
         for i in range(start, end + 1):
             executor.submit(ping, f"{base_ip}{i}")
 
+def get_local_subnet():
+    local_ip = socket.gethostbyname(socket.gethostname())
+    subnet_prefix = ".".join(local_ip.split(".")[:3]) + "."
+    return subnet_prefix
 
 def get_connected_ips():
     output = subprocess.check_output('arp -a', shell=True).decode()
@@ -68,8 +65,8 @@ def main():
     for i in reversed(rows_to_delete):  # Delete from bottom to top
         sheet.delete_rows(i)
 
-    # known_ips = [row.get("Your IP Address") for row in records if row.get("Your IP Address")]
-    # matched_ips = []
+    known_ips = [row.get("Your IP Address") for row in records if row.get("Your IP Address")]
+    matched_ips = []
 
     print("Updating attendance...\n")
     for idx, row in enumerate(records, start=2):
