@@ -18,6 +18,7 @@
 from fastapi import FastAPI
 from apscheduler.schedulers.background import BackgroundScheduler
 from attendance_updater import update_attendance
+from datetime import datetime
 import os
 
 app = FastAPI()
@@ -29,10 +30,18 @@ scheduler = BackgroundScheduler()
 
 @app.on_event("startup")
 def startup_event():
-    # Add hourly job (no immediate run)
-    scheduler.add_job(update_attendance, "interval", seconds=ATTENDANCE_INTERVAL, next_run_time=None)
+    # Add job with immediate first run
+    scheduler.add_job(
+        update_attendance,
+        "interval",
+        seconds=ATTENDANCE_INTERVAL,
+        next_run_time=datetime.now()  # first run immediately
+    )
     scheduler.start()
-    print(f"✅ Scheduler started. Attendance will update every {ATTENDANCE_INTERVAL//60} minutes.")
+    if ATTENDANCE_INTERVAL >= 60:
+        print(f"✅ Scheduler started. Attendance will update every {ATTENDANCE_INTERVAL//60} minutes.")
+    else:
+        print(f"✅ Scheduler started. Attendance will update every {ATTENDANCE_INTERVAL} seconds.")
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -47,6 +56,3 @@ def home():
 @app.head("/")
 def health_check():
     return {"status": "ok"}
-
-
-
