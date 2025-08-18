@@ -204,7 +204,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 # =====================
 # CONFIG
 # =====================
-SPREADSHEET_NAME = "Wi-Fi Attendance Logs"
+SPREADSHEET_NAME = "Wi-Fi Attendance Form"
 WORKSHEET_NAME = "Attendance Logs"
 CHECK_INTERVAL = 60  # seconds
 
