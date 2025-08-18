@@ -23,7 +23,7 @@ import os
 app = FastAPI()
 
 # Read interval from environment variable (default 3600s = 1 hour)
-ATTENDANCE_INTERVAL = int(os.getenv("ATTENDANCE_INTERVAL", 3600))
+ATTENDANCE_INTERVAL = int(os.getenv("ATTENDANCE_INTERVAL", 60))
 
 scheduler = BackgroundScheduler()
 
