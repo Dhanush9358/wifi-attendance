@@ -52,7 +52,7 @@ def main():
     connected_ips = get_connected_ips()
     print("Connecting to Google Sheet...")
     sheet = connect_to_sheet()
-    all_data = sheet.get_all_records()
+    all_data = sheet.get_all_records(expected_headers=["Timestamp", "Email address", "Full Name", "Email", "Department/Class", "Your IP Address", "Status"])
     records = [normalize_keys(row) for row in all_data]
 
     # Delete old duplicate rows
