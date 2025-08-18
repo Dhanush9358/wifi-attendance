@@ -1,64 +1,20 @@
-# import time
-# import attendance_updater
-
-# def hourly_check():
-#     print("⏰ Starting hourly location check...")
-#     while True:
-#         attendance_updater.main()
-#         print("✅ Hourly check complete. Waiting 1 hour...")
-#         time.sleep(60)  # 1 hour = 3600 sec
-
-# if __name__ == "__main__":
-#     hourly_check()
-
-# import time
-# from datetime import datetime, timezone, timedelta
-# import attendance_updater
-
-# IST = timezone(timedelta(hours=5, minutes=30))
-
-# now = datetime.now(IST)
-
-# def hourly_check():
-#     print("⏰ Starting hourly location check...")
-#     while True:
-#         print(f"\n=== Check started at {now.strftime('%Y-%m-%d %H:%M:%S')} ===")
-#         attendance_updater.main()
-#         print(f"✅ Check complete at {now.strftime('%Y-%m-%d %H:%M:%S')}. Waiting 60 seconds...\n")
-#         time.sleep(60)  # or any interval you want
-
-# if __name__ == "__main__":
-#     hourly_check()
-
-
-# import time
-# import schedule
-# from attendance_updater import update_attendance
-
-# def job():
-#     update_attendance()
-
-# # Run every hour
-# schedule.every(1).hours.do(job)
-
-# print("⏳ Hourly tracker started...")
-
-# while True:
-#     schedule.run_pending()
-#     time.sleep(1)
-
-import time
-import schedule
+from apscheduler.schedulers.background import BackgroundScheduler
 from attendance_updater import update_attendance
+import time
 
-def job():
-    print("⏳ Running hourly attendance check...")
-    update_attendance()
+def start_scheduler():
+    scheduler = BackgroundScheduler()
 
-schedule.every().hour.do(job)
+    # Run every hour (no immediate run at startup)
+    scheduler.add_job(update_attendance, 'interval', hours=1)
 
-if __name__ == "__main__":
-    job()  # run once at startup
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    scheduler.start()
+    print("✅ Scheduler started. Attendance will update every hour.")
+
+    # Keep alive loop
+    try:
+        while True:
+            time.sleep(60)
+    except (KeyboardInterrupt, SystemExit):
+        scheduler.shutdown()
+

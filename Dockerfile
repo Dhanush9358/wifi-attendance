@@ -31,8 +31,10 @@ ENV PORT=8000
 
 # CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 # Start FastAPI web service (scheduler runs inside it)
-# CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+# Start FastAPI web service (scheduler runs inside it)
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+
 
 
 
