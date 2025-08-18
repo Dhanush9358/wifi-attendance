@@ -110,6 +110,7 @@ def connect_to_sheet():
 
 # === Ping and Subnet Detection ===
 def ping(ip):
+    # Windows ping (-n), for Linux/Mac change to ["ping", "-c", "1", "-W", "1", ip]
     subprocess.run(["ping", "-n", "1", "-w", "100", ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def scan_subnet(base_ip="192.168.0.", start=1, end=254):
@@ -131,7 +132,7 @@ def normalize_keys(row):
 
 # === Core Attendance Update Logic ===
 def update_attendance():
-    """Run full attendance check and update Google Sheet."""
+    """Run full attendance check and update Google Sheet. Returns results list."""
     subnet = get_local_subnet()
     print(f"📡 Detected Subnet: {subnet}0/24")
     print("🔍 Scanning Wi-Fi network for connected devices...")
@@ -146,7 +147,7 @@ def update_attendance():
         sheet = connect_to_sheet()
     except Exception as e:
         print(f"❌ Failed to connect to Google Sheets: {e}")
-        return
+        return []
 
     all_data = sheet.get_all_records()
     records = [normalize_keys(row) for row in all_data]
@@ -162,6 +163,7 @@ def update_attendance():
         sheet.delete_rows(i)
 
     print("✏️ Updating attendance...\n")
+    results = []
     for idx, row in enumerate(records, start=2):  # start=2 → skip headers
         ip = row.get("Your IP Address", "").strip()
         if not ip:
@@ -170,11 +172,17 @@ def update_attendance():
         status = "Present" if ip in connected_ips else "Invalid Wi-Fi"
         try:
             sheet.update_acell(f"G{idx}", status)
+            results.append({
+                "name": row.get("Full Name"),
+                "ip": ip,
+                "status": status
+            })
             print(f"{row.get('Full Name')} ({ip}): {status}")
         except Exception as e:
             print(f"❌ Failed to update row {idx} for {row.get('Full Name')}: {e}")
 
     print("✅ Attendance update complete.\n")
+    return results
 
 
 def main():
@@ -183,3 +191,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

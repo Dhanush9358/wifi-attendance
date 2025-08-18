@@ -2,30 +2,38 @@ from fastapi import FastAPI
 import threading
 import time
 import datetime
-import attendance_updater  # your existing script (import its functions)
+from attendance_updater import update_attendance
 
 app = FastAPI()
 
-# Store last check time
-last_check = {"time": None}
+# Store last results
+attendance_results = {
+    "last_check": None,
+    "records": []
+}
 
-def run_attendance_loop():
+def run_scheduler():
+    """Run update_attendance every 1 minute in background."""
     while True:
-        print("🔄 Running Wi-Fi Attendance check...")
+        print("🔄 Running scheduled attendance check...")
         try:
-            attendance_updater.main()  # call your updater's main function
-            last_check["time"] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+            results = update_attendance()  # modify updater to return results
+            attendance_results["last_check"] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+            attendance_results["records"] = results
         except Exception as e:
-            print(f"❌ Error in updater: {e}")
-        time.sleep(3600)  # wait 1 hour before next check
+            print(f"❌ Error in scheduler: {e}")
+        time.sleep(60)  # wait 1 minute
 
-# Start the updater in a background thread
-threading.Thread(target=run_attendance_loop, daemon=True).start()
+# Start scheduler in background
+threading.Thread(target=run_scheduler, daemon=True).start()
+
 
 @app.get("/")
 def home():
     return {"message": "Wi-Fi Attendance Service is running"}
 
+
 @app.get("/status")
 def status():
-    return {"last_check": last_check["time"]}
+    """Return the latest attendance check results."""
+    return attendance_results
