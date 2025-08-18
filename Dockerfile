@@ -16,15 +16,25 @@ RUN apt-get update && \
 # Copy the rest of your project files
 COPY . /app
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# # Create logs directory
+# RUN mkdir -p /app/logs
 
 # Ensure Python output is unbuffered so logs show immediately
 ENV PYTHONUNBUFFERED=1
 
+# Render provides PORT; default to 8000 if not present
+ENV PORT=8000
+
 # Set default command to run your hourly tracker
-CMD ["python", "-u", "hourly_tracker.py"]
+# CMD ["python", "-u", "hourly_tracker.py"]
 # CMD ["uvicorn", "attendance_updater:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start FastAPI web service (scheduler runs inside it)
+# CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+
+
 
 
 # Build the Docker image

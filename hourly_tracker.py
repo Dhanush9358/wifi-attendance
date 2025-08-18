@@ -1,15 +1,15 @@
-import time
-import attendance_updater
+# import time
+# import attendance_updater
 
-def hourly_check():
-    print("⏰ Starting hourly location check...")
-    while True:
-        attendance_updater.main()
-        print("✅ Hourly check complete. Waiting 1 hour...")
-        time.sleep(60)  # 1 hour = 3600 sec
+# def hourly_check():
+#     print("⏰ Starting hourly location check...")
+#     while True:
+#         attendance_updater.main()
+#         print("✅ Hourly check complete. Waiting 1 hour...")
+#         time.sleep(60)  # 1 hour = 3600 sec
 
-if __name__ == "__main__":
-    hourly_check()
+# if __name__ == "__main__":
+#     hourly_check()
 
 # import time
 # from datetime import datetime, timezone, timedelta
@@ -29,3 +29,36 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     hourly_check()
+
+
+# import time
+# import schedule
+# from attendance_updater import update_attendance
+
+# def job():
+#     update_attendance()
+
+# # Run every hour
+# schedule.every(1).hours.do(job)
+
+# print("⏳ Hourly tracker started...")
+
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
+
+import time
+import schedule
+from attendance_updater import update_attendance
+
+def job():
+    print("⏳ Running hourly attendance check...")
+    update_attendance()
+
+schedule.every().hour.do(job)
+
+if __name__ == "__main__":
+    job()  # run once at startup
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
