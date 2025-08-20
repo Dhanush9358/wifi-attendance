@@ -341,24 +341,17 @@ def ping(ip: str) -> bool:
     except Exception:
         return False
 
-def get_local_subnet() -> str:
-    """Return local subnet prefix, e.g., 192.168.1."""
-    try:
-        local_ip = socket.gethostbyname(socket.gethostname())
-        parts = local_ip.split(".")
-        if len(parts) == 4:
-            return ".".join(parts[:3]) + "."
-    except Exception:
-        pass
-    return "192.168.1."
-
 def normalize_keys(row):
     """Trim spaces from keys and values of a row dict."""
     return {str(k).strip(): str(v).strip() for k, v in row.items()}
 
-# === Core Update ===
-def update_attendance_continuous(interval_seconds=30):
-    """Continuously update attendance in Google Sheet every interval_seconds."""
+# === Real-time Attendance Updater ===
+def run_attendance_checker(interval_seconds=30):
+    """
+    Continuously check attendance in Google Sheet every interval_seconds.
+    Marks Present / Invalid Wi-Fi dynamically.
+    Keeps a log of status changes.
+    """
     sheet = connect_to_sheet()
     expected_headers = [
         "Timestamp",
@@ -368,7 +361,11 @@ def update_attendance_continuous(interval_seconds=30):
         "Department/Class",
         "Your IP Address",
         "Status",
+        "Status Log"
     ]
+
+    # Keep track of last known status to log changes
+    last_status = {}
 
     print("=== Starting real-time attendance updater ===\n")
     while True:
@@ -381,17 +378,32 @@ def update_attendance_continuous(interval_seconds=30):
         def check_and_update(row_idx, row):
             ip = row.get("Your IP Address", "").strip()
             full_name = row.get("Full Name", "").strip()
-            status_cell = f"G{row_idx + 2}"  # Google Sheets row starts from 2
+            status_cell = f"G{row_idx + 2}"        # Column G
+            log_cell = f"H{row_idx + 2}"           # Column H
 
             if not ip:
                 return
 
-            if ping(ip):
-                sheet.update(status_cell, "Present")
-                print(f"{full_name} ({ip}): Present")
-            else:
-                sheet.update(status_cell, "Invalid Wi-Fi")
-                print(f"{full_name} ({ip}): Invalid Wi-Fi")
+            current_status = "Present" if ping(ip) else "Invalid Wi-Fi"
+
+            # Update status cell
+            sheet.update(status_cell, current_status)
+
+            # Update log if status changed
+            previous = last_status.get(ip)
+            if previous != current_status:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                new_log = f"{timestamp}: {current_status}"
+                try:
+                    existing_log = sheet.cell(row_idx + 2, 8).value or ""
+                    if existing_log:
+                        new_log = existing_log + " | " + new_log
+                except Exception:
+                    pass
+                sheet.update(log_cell, new_log)
+                last_status[ip] = current_status
+
+            print(f"{full_name} ({ip}): {current_status}")
 
         # Multithreaded ping check for all students
         with ThreadPoolExecutor(max_workers=20) as executor:
@@ -401,12 +413,12 @@ def update_attendance_continuous(interval_seconds=30):
         print(f"Sleeping for {interval_seconds} seconds before next check...\n")
         time.sleep(interval_seconds)
 
-
-# CLI entrypoint
+# For direct CLI run
 def main():
-    # Change interval_seconds as needed (e.g., 30 sec)
-    update_attendance_continuous(interval_seconds=30)
+    run_attendance_checker(interval_seconds=30)
 
+# Allow import in FastAPI without running immediately
 if __name__ == "__main__":
     main()
+
 
