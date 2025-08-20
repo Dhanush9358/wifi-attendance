@@ -17,7 +17,7 @@
 
 from fastapi import FastAPI
 from apscheduler.schedulers.background import BackgroundScheduler
-from attendance_updater import run_attendance_checker
+from attendance_updater import update_attendance
 from datetime import datetime
 import os
 
@@ -33,7 +33,7 @@ scheduler = BackgroundScheduler()
 def startup_event():
     # Add job with immediate first run
     scheduler.add_job(
-        run_attendance_checker,
+        update_attendance,
         "interval",
         seconds=ATTENDANCE_INTERVAL,
         next_run_time=datetime.now()  # first run immediately
