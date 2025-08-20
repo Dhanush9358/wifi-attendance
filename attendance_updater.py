@@ -297,7 +297,15 @@ def update_attendance():
 
     print("=== Attendance updater finished ===\n")
 
-
+def run_attendance_checker(interval_seconds=60):
+    """Run update_attendance continuously every interval_seconds until manually stopped."""
+    print(f"🔄 Starting continuous attendance checker (every {interval_seconds}s)")
+    try:
+        while True:
+            update_attendance()
+            time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        print("🛑 Attendance checker stopped manually.")
 
 
 
