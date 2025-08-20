@@ -170,11 +170,29 @@ def connect_to_sheet():
 IS_WINDOWS = platform.system().lower().startswith("win")
 
 def ping(ip: str):
-    if IS_WINDOWS:
-        cmd = ["ping", "-n", "1", "-w", "200", ip]
-    else:
-        cmd = ["ping", "-c", "1", "-W", "1", ip]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Ping a given IP address to update ARP table (fire-and-forget)."""
+    try:
+        if IS_WINDOWS:
+            subprocess.run(["ping", "-n", "1", "-w", "200", ip],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run(["ping", "-c", "1", "-W", "1", ip],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def check_ip_reachable(ip_address: str) -> bool:
+    """Return True if the IP is reachable via ping, False otherwise."""
+    try:
+        subprocess.run(
+            ["ping", "-c", "1", ip_address] if not IS_WINDOWS else ["ping", "-n", "1", ip_address],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=1
+        )
+        return True
+    except Exception:
+        return False
 
 def get_local_subnet() -> str:
     try:
@@ -187,26 +205,35 @@ def get_local_subnet() -> str:
     return "192.168.1."
 
 def scan_subnet(base_ip_prefix: str, start: int = 1, end: int = 254):
+    """Ping all IPs in the subnet to populate ARP table (fire-and-forget)."""
     with ThreadPoolExecutor(max_workers=100) as executor:
         for i in range(start, end + 1):
             executor.submit(ping, f"{base_ip_prefix}{i}")
     time.sleep(2)
 
+def get_connected_ips():
+    """Return a set of all IPv4 addresses in the ARP table."""
+    ips = set()
+    try:
+        if IS_WINDOWS:
+            output = subprocess.check_output("arp -a", shell=True).decode(errors="ignore")
+            for ip, _hw, _dyn in re.findall(r"(\d+\.\d+\.\d+\.\d+)\s+([-\w]+)\s+(\w+)", output):
+                ips.add(ip)
+        else:
+            try:
+                output = subprocess.check_output(["ip", "neigh", "show"], text=True)
+                for ip in re.findall(r"(\d+\.\d+\.\d+\.\d+)\s+dev", output):
+                    ips.add(ip)
+            except Exception:
+                output = subprocess.check_output("arp -an", shell=True, text=True)
+                for ip in re.findall(r"\((\d+\.\d+\.\d+\.\d+)\)", output):
+                    ips.add(ip)
+    except Exception:
+        pass
+    return ips
+
 def normalize_keys(row):
     return {str(k).strip(): str(v).strip() for k, v in row.items()}
-
-# === New function: ping user IP directly ===
-def check_ip_reachable(ip_address):
-    try:
-        subprocess.run(
-            ["ping", "-c", "1", ip_address] if not IS_WINDOWS else ["ping", "-n", "1", ip_address],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=1
-        )
-        return True
-    except Exception:
-        return False
 
 # === Core Update ===
 def update_attendance():
@@ -218,6 +245,9 @@ def update_attendance():
 
     print("Scanning Wi-Fi network for connected devices...")
     scan_subnet(subnet)
+
+    print("Fetching updated ARP table...")
+    connected_ips = get_connected_ips()
 
     print("Connecting to Google Sheet...")
     sheet = connect_to_sheet()
@@ -252,8 +282,8 @@ def update_attendance():
         if not ip:
             continue
 
-        # Only check IPv4 addresses
         if re.match(r"\d+\.\d+\.\d+\.\d+", ip):
+            # IPv4 address: check if reachable
             if check_ip_reachable(ip):
                 sheet.update(status_cell, [["Present"]])
                 print(f"{full_name} ({ip}): Present")
@@ -261,15 +291,9 @@ def update_attendance():
                 sheet.update(status_cell, [["Invalid Wi-Fi"]])
                 print(f"{full_name} ({ip}): Invalid Wi-Fi")
         else:
-            # IPv6 or unknown format
+            # IPv6 or invalid format
             sheet.update(status_cell, [["IPv6 address not checked"]])
             print(f"{full_name} ({ip}): IPv6 address not checked")
 
     print("=== Attendance updater finished ===\n")
 
-# CLI entrypoint
-def main():
-    update_attendance()
-
-if __name__ == "__main__":
-    main()
